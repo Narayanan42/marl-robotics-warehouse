@@ -1,35 +1,33 @@
-# --- IPPO specific parameters ---
+# --- IPPO (Independent PPO) configuration ---
+# Uses independent critics (ac_critic) with PPO policy updates
 
-action_selector: "soft_policies"
-mask_before_softmax: True
+name: "ippo"  # Algorithm name
+learner: "ppo_learner"  # Use PPO learner implementation
+critic_type: "ac_critic"  # Decentralized critics that see only local observations
 
-runner: "parallel"
+# Policy settings
+agent_output_type: "pi_logits"  # Output logits that are converted to probabilities
+action_selector: "soft_policies"  # Sample from policy distribution
+mask_before_softmax: True  # Mask unavailable actions before softmax
 
+# PPO-specific parameters
+entropy_coef: 0.001  # Entropy bonus coefficient for exploration
+eps_clip: 0.2  # PPO clipping parameter
+epochs: 4  # Number of policy update epochs per batch
+
+# Training parameters
 buffer_size: 10
 batch_size_run: 10
 batch_size: 10
-
-# update the target network every {} training steps
-target_update_interval_or_tau: 0.01
-
 lr: 0.0003
 hidden_dim: 128
+target_update_interval_or_tau: 0.01  # Soft update parameter
+q_nstep: 5  # N-step returns
 
-obs_agent_id: True
+# Observation settings
+obs_agent_id: True  # Include agent ID in observations
 obs_last_action: False
-obs_individual_obs: False
+obs_individual_obs: False  # Not needed for independent critics
 
-# use IA2C
-agent_output_type: "pi_logits"
-learner: "ppo_learner"
-entropy_coef: 0.001
-standardise_returns: False
-standardise_rewards: True
-use_rnn: True
-q_nstep: 5 # 1 corresponds to normal r + gammaV
-critic_type: "ac_critic"
-epochs: 4
-eps_clip: 0.2
-name: "ippo"
-
+# Training length
 t_max: 20050000

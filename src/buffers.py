@@ -1,9 +1,12 @@
+"""Episode buffer implementations."""
 import torch as th
 import numpy as np
 from types import SimpleNamespace as SN
 
 
 class EpisodeBatch:
+    """A batch of episodes with data stored in a fixed-length tensor."""
+
     def __init__(self,
                  scheme,
                  groups,
@@ -206,6 +209,8 @@ class EpisodeBatch:
 
 
 class ReplayBuffer(EpisodeBatch):
+    """Replay buffer to store episodes and sample batches for training."""
+    
     def __init__(self, scheme, groups, buffer_size, max_seq_length, preprocess=None, device="cpu"):
         super(ReplayBuffer, self).__init__(scheme, groups, buffer_size, max_seq_length, preprocess=preprocess, device=device)
         self.buffer_size = buffer_size  # same as self.batch_size but more explicit
@@ -246,4 +251,3 @@ class ReplayBuffer(EpisodeBatch):
                                                                         self.buffer_size,
                                                                         self.scheme.keys(),
                                                                         self.groups.keys())
-
