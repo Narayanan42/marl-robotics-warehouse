@@ -1,4 +1,4 @@
-# MARL-RWARE: Multi-Agent RL for Warehouse Robotics
+# Multi-Agent RL for Warehouse Robotics
 ## Overview
 
 This codebase provides implementations of four key MARL algorithms:
@@ -12,9 +12,8 @@ The implementation is optimized for the RWARE environment, which simulates robot
 
 ## Key Features
 
-- **Centralized vs Decentralized Training**: Mix and match critic architectures with policy update methods
+- **Centralized vs Decentralized Training**: centralize and decentralized critic architectures with policy update methods
 - **Parallel Execution**: Train with multiple environment instances in parallel
-- **RNN-Based Policies**: Agents use GRU cells to handle partial observability
 
 ## Installation
 
@@ -43,5 +42,3 @@ Algorithm configuration files are in `src/config/algs/`:
 - `ippo.yaml`: Independent PPO with decentralized critics
 - `maa2c.yaml`: Multi-Agent A2C with centralized critic  
 - `ia2c.yaml`: Independent A2C with decentralized critics
-
-Environment configuration is in `src/config/envs/gymma.yaml` with RWARE-specific settings.
