@@ -74,12 +74,9 @@ class BasicMAC:
         self.agent = RNNAgent(input_shape, self.args)
 
     def _build_inputs(self, batch, t):
-        """Create inputs for the agent network."""
-        # Assumes homogenous agents with flat observations.
-        # Other MACs might want to e.g. delegate building inputs to each agent
         bs = batch.batch_size
         inputs = []
-        inputs.append(batch["obs"][:, t])  # (bs, n_agents, obs_dim)
+        inputs.append(batch["obs"][:, t]) 
         
         if self.args.obs_last_action:
             if t == 0:
@@ -204,7 +201,6 @@ class EpsilonGreedyActionSelector:
 
     def select_action(self, agent_inputs, avail_actions, t_env, test_mode=False):
         """Select actions using epsilon-greedy with action masking."""
-        # Assuming agent_inputs is a batch of Q-Values for each agent (batch, n_agents, n_actions)
         self.epsilon = self.schedule.eval(t_env)
 
         if test_mode:
@@ -213,7 +209,7 @@ class EpsilonGreedyActionSelector:
 
         # Mask actions that are excluded from selection
         masked_q_values = agent_inputs.clone()
-        masked_q_values[avail_actions == 0.0] = -float("inf")  # Should never be selected!
+        masked_q_values[avail_actions == 0.0] = -float("inf")
 
         random_numbers = th.rand_like(agent_inputs[:, :, 0])
         pick_random = (random_numbers < self.epsilon).long()
@@ -231,16 +227,12 @@ class SoftPoliciesSelector:
 
     def select_action(self, agent_inputs, avail_actions, t_env, test_mode=False):
         """Sample actions from policy distribution."""
-        # Mask before sampling to ensure valid actions
         masked_probs = agent_inputs.clone()
         masked_probs[avail_actions == 0] = 0.0
-        
-        # Normalize if needed
+    
         if masked_probs.sum(dim=-1, keepdim=True).min() <= 0:
-            # Some agents have no valid actions, add a small constant to avoid division by zero
             masked_probs = masked_probs + 1e-8
             
-        # Normalize
         masked_probs = masked_probs / masked_probs.sum(dim=-1, keepdim=True)
         
         # Sample from the distribution

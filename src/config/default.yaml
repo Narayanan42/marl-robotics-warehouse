@@ -1,53 +1,46 @@
-# Default configuration for MARL-RWARE framework
-
-# --- Environment options ---
-env: "gymma"  # Use the gymnasium multi-agent wrapper
-common_reward: True  # Use common reward for all agents by default
-reward_scalarisation: "sum"  # How to aggregate per-agent rewards if using common reward
+env: "gymma"
+common_reward: True
+reward_scalarisation: "sum"
 env_args:
-  key: null  # Environment key, e.g. "rware:rware-tiny-2ag-v2"
-  time_limit: 200  # Episode length limit
-  seed: 1  # Random seed
+  key: null
+  time_limit: 200
+  seed: 1
 
-# --- Training options ---
-seed: 1  # Random seed for reproducibility
-batch_size_run: 4  # Number of environments to run in parallel
-batch_size: 4  # Number of episodes to train on
-buffer_size: 4  # Size of the replay buffer
-gamma: 0.99  # Discount factor
-lr: 0.0005  # Learning rate
-grad_norm_clip: 10  # Gradient norm clipping
-target_update_interval_or_tau: 0.01  # Soft target network update parameter
-epochs: 4  # Number of PPO policy update epochs
-add_value_last_step: True  # Add value of last state to returns
+seed: 1
+batch_size_run: 4
+batch_size: 4
+buffer_size: 4
+gamma: 0.99
+lr: 0.0005
+grad_norm_clip: 10
+target_update_interval_or_tau: 0.01
+epochs: 4
+add_value_last_step: True
 
-# --- Agent options ---
-hidden_dim: 64  # Size of hidden layers
-obs_agent_id: True  # Include agent ID in observations
-obs_last_action: False  # Include last action in observations
-obs_individual_obs: False  # Include individual observations in critic input
-use_rnn: True  # Use RNN in policy network
-standardise_returns: False  # Standardize returns
-standardise_rewards: True  # Standardize rewards
+hidden_dim: 64
+obs_agent_id: True
+obs_last_action: False
+obs_individual_obs: False
+use_rnn: True
+standardise_returns: False
+standardise_rewards: True
 
-# --- Experiment options ---
-runner: "parallel"  # Use parallel runner
-t_max: 2000000  # Maximum number of environment timesteps
-test_nepisode: 20  # Number of test episodes
-test_interval: 10000  # Test every N timesteps
-log_interval: 10000  # Log every N timesteps
-runner_log_interval: 10000  # Log runner stats every N timesteps
-learner_log_interval: 10000  # Log learner stats every N timesteps
-use_cuda: True  # Use CUDA if available
-buffer_cpu_only: True  # Store replay buffer on CPU to save GPU memory
+runner: "parallel"
+t_max: 2000000
+test_nepisode: 20
+test_interval: 10000
+log_interval: 10000
+runner_log_interval: 10000
+learner_log_interval: 10000
+use_cuda: True
+buffer_cpu_only: True
 
-# --- Checkpointing and visualization ---
-save_model: False  # Save models
-save_model_interval: 50000  # Save model every N timesteps
-checkpoint_path: ""  # Path to load checkpoint from
-evaluate: False  # Run evaluation only (no training)
-render: False  # Render the environment during evaluation
-load_step: 0  # Load model trained for specific number of timesteps (0 for latest)
-save_replay: False  # Save replay when evaluating
-use_tensorboard: False  # Log to tensorboard
-local_results_path: "results"  # Path to save results
+save_model: False
+save_model_interval: 50000
+checkpoint_path: ""
+evaluate: False
+render: False
+load_step: 0
+save_replay: False
+use_tensorboard: False
+local_results_path: "results"

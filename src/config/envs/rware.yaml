@@ -1,24 +1,19 @@
-# --- Robot Warehouse (RWARE) environment configuration ---
-env: "gymma"  # Use gymma wrapper
+env: "gymma"
 
-# Environment parameters
 common_reward: True
 reward_scalarisation: "sum"
 
 env_args:
-  key: "rware:rware-tiny-2ag-v2"  # Default RWARE environment key
-  time_limit: 500  # Maximum timesteps per episode
-  seed: 42  # Random seed
+  key: "rware:rware-tiny-2ag-v2"
+  time_limit: 500
+  seed: 42
 
-# Testing and evaluation settings
-test_greedy: True  # Use greedy policy during evaluation
-test_nepisode: 20  # Number of evaluation episodes
-test_interval: 50000  # Test every N timesteps
+test_greedy: True
+test_nepisode: 20
+test_interval: 50000
 
-# Logging settings
-log_interval: 10000  # Log stats every N timesteps
-runner_log_interval: 10000  # Log runner stats every N timesteps
-learner_log_interval: 10000  # Log learner stats every N timesteps
+log_interval: 10000
+runner_log_interval: 10000
+learner_log_interval: 10000
 
-# Training length
-t_max: 2050000  # Total environment timesteps for training
+t_max: 2050000

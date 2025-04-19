@@ -4,10 +4,6 @@ import torch.nn.functional as F
 
 
 class CentralVCritic(nn.Module):
-    """
-    Centralized Value Critic for MAPPO and MAA2C.
-    Takes global state as input and outputs values for each agent.
-    """
     def __init__(self, scheme, args):
         super(CentralVCritic, self).__init__()
         self.args = args
@@ -23,15 +19,6 @@ class CentralVCritic(nn.Module):
         self.fc3 = nn.Linear(args.hidden_dim, self.n_agents)
 
     def forward(self, batch_or_states):
-        """
-        Forward pass through the critic.
-        
-        Args:
-            batch_or_states: Either an Episode batch of data or a state tensor directly
-            
-        Returns:
-            Values for each agent (batch_size, seq_length, n_agents, 1)
-        """
         # Handle different input formats
         if isinstance(batch_or_states, dict) or hasattr(batch_or_states, "batch_size"):
             # Input is an episode batch
@@ -74,10 +61,6 @@ class CentralVCritic(nn.Module):
 
 
 class ACCritic(nn.Module):
-    """
-    Actor-Critic Value Critic for IPPO and IA2C.
-    Each agent has its own critic that takes local observations as input.
-    """
     def __init__(self, scheme, args):
         super(ACCritic, self).__init__()
         self.args = args
@@ -85,12 +68,10 @@ class ACCritic(nn.Module):
         self.n_agents = args.n_agents
         
         input_shape = scheme["obs"]["vshape"]
-        
-        # Add agent ID to input shape if configured
+
         if args.obs_agent_id:
             input_shape += args.n_agents
 
-        # Add last action to input shape if configured
         if args.obs_last_action:
             input_shape += scheme["actions_onehot"]["vshape"][0]
 
@@ -102,15 +83,6 @@ class ACCritic(nn.Module):
         ])
 
     def forward(self, batch):
-        """
-        Forward pass through the critic network for each agent.
-        
-        Args:
-            batch: Episode batch of data
-            
-        Returns:
-            Values for each agent (batch_size, seq_length, n_agents, 1)
-        """
         bs, seq_len = batch.batch_size, batch.max_seq_length
         
         # Collect inputs for all agents
@@ -172,16 +144,6 @@ class AgentCritic(nn.Module):
         self.fc3 = nn.Linear(args.hidden_dim, 1)
 
     def forward(self, x):
-        """
-        Forward pass through the critic network.
-        
-        Args:
-            x: Agent inputs (batch_size, seq_len, input_shape)
-            
-        Returns:
-            Values (batch_size, seq_len, 1)
-        """
-        # Reshape to 2D for processing
         orig_shape = x.shape
         x = x.reshape(-1, orig_shape[-1])
         
@@ -190,6 +152,5 @@ class AgentCritic(nn.Module):
         x = F.relu(self.fc2(x))
         v = self.fc3(x)
         
-        # Reshape back to original dimensions with value output
         v = v.view(orig_shape[:-1] + (1,))
         return v

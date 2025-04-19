@@ -1,6 +1,4 @@
-"""
-Runner implementation for parallel environment execution.
-"""
+
 from functools import partial
 from multiprocessing import Pipe, Process
 import pickle
@@ -13,7 +11,6 @@ from buffers import EpisodeBatch
 
 
 class CloudpickleWrapper:
-    """Uses cloudpickle to serialize contents for multiprocessing"""
     def __init__(self, x):
         self.x = x
 
@@ -25,14 +22,11 @@ class CloudpickleWrapper:
 
 
 def env_worker(remote, env_fn):
-    """Worker function for multiprocessing environment runs"""
-    # Handle both callable functions and CloudpickleWrapper objects
+
     if hasattr(env_fn, 'x'):
         try:
-            env = env_fn.x()  # For CloudpickleWrapper with partial function
-        except TypeError:
-            # If partial function fails, try calling without arguments
-            env = env_fn.x
+            env = env_fn.x() 
+        except TypeError:            env = env_fn.x
     else:
         # Direct callable
         env = env_fn()
@@ -99,11 +93,8 @@ class ParallelRunner:
             env_args[i]["common_reward"] = self.args.common_reward
             env_args[i]["reward_scalarisation"] = self.args.reward_scalarisation
         
-        # Check if env_fn accepts arguments or not
         try:
-            # Try creating environment with args to see if it works
             test_env = env_fn(**env_args[0])
-            # If it works, use partial to pass args
             self.ps = [
                 Process(
                     target=env_worker,
@@ -223,7 +214,6 @@ class ParallelRunner:
         final_env_infos = []
 
         while True:
-            # Generate actions for non-terminated environments
             try:
                 actions = self.mac.select_actions(
                     self.batch,
@@ -235,7 +225,6 @@ class ParallelRunner:
                 cpu_actions = actions.to("cpu").numpy()
             except RuntimeError as e:
                 print(f"Error in select_actions: {e}")
-                # Fallback to random actions if there's an error
                 avail_actions = self.batch["avail_actions"][:, self.t][envs_not_terminated]
                 random_actions = np.array([np.random.choice(np.where(aa[i] > 0)[0]) 
                                          for i, aa in enumerate(avail_actions.cpu().numpy())])
@@ -251,8 +240,8 @@ class ParallelRunner:
             # Send actions to each env
             action_idx = 0
             for idx, parent_conn in enumerate(self.parent_conns):
-                if idx in envs_not_terminated:  # We produced actions for this env
-                    if not terminated[idx]:  # Only send actions if env not terminated
+                if idx in envs_not_terminated:  
+                    if not terminated[idx]:  
                         parent_conn.send(("step", cpu_actions[action_idx]))
                     action_idx += 1
                     if idx == 0 and test_mode and self.args.render:
@@ -266,54 +255,41 @@ class ParallelRunner:
             if all_terminated:
                 break
 
-            # Post step data we will insert for the current timestep
             post_transition_data = {"reward": [], "terminated": []}
-            # Data for the next step we will insert in order to select an action
             pre_transition_data = {"state": [], "avail_actions": [], "obs": []}
 
-            # Receive data back for each unterminated env
             for idx, parent_conn in enumerate(self.parent_conns):
                 if not terminated[idx]:
                     data = parent_conn.recv()
                     
-                    # Handle reward - could be scalar or list/array
                     reward = data["reward"]
                     
-                    # Process reward for the buffer - ensure it has correct shape (scalar)
                     if isinstance(reward, (list, np.ndarray)) and len(np.array(reward).shape) > 0:
-                        # For buffer, we need a scalar reward so we aggregate per-agent rewards
                         scalarisation = getattr(self.args, "reward_scalarisation", "sum")
                         if scalarisation == "mean":
                             scalar_reward = np.mean(reward)
-                        else:  # Default to sum
+                        else:  
                             scalar_reward = np.sum(reward)
                         post_transition_data["reward"].append((scalar_reward,))
                     else:
-                        # Scalar reward, keep as is
                         post_transition_data["reward"].append((reward,))
 
-                    # Track the original rewards for return calculation
                     if isinstance(reward, (list, np.ndarray)):
                         if self.args.common_reward:
-                            # Take sum or mean depending on reward_scalarisation
                             scalarisation = getattr(self.args, "reward_scalarisation", "sum")
                             if scalarisation == "mean":
                                 episode_returns[idx] += np.mean(reward)
                             else:  # Default to sum
                                 episode_returns[idx] += np.sum(reward)
                         else:
-                            # If we expect per-agent rewards, add each component
                             if len(np.array(reward).shape) > 0 and len(reward) == len(episode_returns[idx]):
                                 episode_returns[idx] += np.array(reward)
                             else:
-                                # If dimensions don't match, use broadcasting if possible
                                 try:
                                     episode_returns[idx] += np.array(reward)
                                 except ValueError:
-                                    # Fallback to sum if broadcasting fails
                                     episode_returns[idx] += np.sum(reward)
                     else:
-                        # Scalar reward
                         episode_returns[idx] += reward
                     
                     episode_lengths[idx] += 1
@@ -330,32 +306,25 @@ class ParallelRunner:
                     terminated[idx] = data["terminated"]
                     post_transition_data["terminated"].append((env_terminated,))
 
-                    # Data for the next timestep needed to select an action
                     pre_transition_data["state"].append(data["state"])
                     pre_transition_data["avail_actions"].append(data["avail_actions"])
                     pre_transition_data["obs"].append(data["obs"])
 
-            # Add post_transiton data into the batch
             self.batch.update(
                 post_transition_data,
                 bs=envs_not_terminated,
                 ts=self.t,
                 mark_filled=False,
             )
-
-            # Move onto the next timestep
             self.t += 1
 
-            # Add the pre-transition data
             self.batch.update(
                 pre_transition_data, bs=envs_not_terminated, ts=self.t, mark_filled=True
             )
 
-        # Update environment steps count
         if not test_mode:
             self.t_env += self.env_steps_this_run
 
-        # Get stats back for each env
         for parent_conn in self.parent_conns:
             parent_conn.send(("get_stats", None))
 
@@ -447,7 +416,6 @@ class ParallelRunner:
         stats.clear()
         
     def get_stats(self):
-        """Return the calculated statistics"""
         stats = {}
         stats.update(getattr(self, "return_stats", {}))
         stats.update(getattr(self, "env_stats", {}))

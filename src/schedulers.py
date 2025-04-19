@@ -1,10 +1,6 @@
-"""
-Scheduler implementations for decaying values over time.
-"""
 import numpy as np
 
 class DecayThenFlatSchedule:
-    """Decay a value (e.g., epsilon) over time then flatten it."""
     def __init__(self, start, finish, time_length, decay="exp"):
         self.start = start
         self.finish = finish
@@ -16,7 +12,6 @@ class DecayThenFlatSchedule:
             self.exp_scaling = (-1) * self.time_length / np.log(self.finish) if self.finish > 0 else 1
 
     def eval(self, T):
-        """Evaluate schedule at time T."""
         if self.decay in ["linear"]:
             return max(self.finish, self.start - self.delta * T)
         elif self.decay in ["exp"]:

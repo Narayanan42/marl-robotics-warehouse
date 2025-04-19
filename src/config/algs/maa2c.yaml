@@ -1,31 +1,23 @@
-# --- MAA2C (Multi-Agent Advantage Actor-Critic) configuration ---
-# Uses a centralized critic (cv_critic) with advantage actor-critic updates
+name: "maa2c"
+learner: "actor_critic_learner"
+critic_type: "cv_critic"
 
-name: "maa2c"  # Algorithm name
-learner: "actor_critic_learner"  # Use Actor-Critic learner implementation
-critic_type: "cv_critic"  # Centralized critic that sees global state
+agent_output_type: "pi_logits"
+action_selector: "soft_policies"
+mask_before_softmax: True
 
-# Policy settings
-agent_output_type: "pi_logits"  # Output logits that are converted to probabilities
-action_selector: "soft_policies"  # Sample from policy distribution
-mask_before_softmax: True  # Mask unavailable actions before softmax
+entropy_coef: 0.01
 
-# A2C-specific parameters
-entropy_coef: 0.01  # Entropy bonus coefficient for exploration (higher than PPO)
-
-# Training parameters
 buffer_size: 10
 batch_size_run: 10
 batch_size: 10
 lr: 0.0005
 hidden_dim: 128
-target_update_interval_or_tau: 0.01  # Soft update parameter
-q_nstep: 5  # N-step returns
+target_update_interval_or_tau: 0.01
+q_nstep: 5
 
-# Observation settings
-obs_agent_id: True  # Include agent ID in observations
+obs_agent_id: True
 obs_last_action: False
-obs_individual_obs: False  # Don't include other agents' observations in critic
+obs_individual_obs: False
 
-# Training length
 t_max: 20050000

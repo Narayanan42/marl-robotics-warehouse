@@ -1,6 +1,3 @@
-"""
-Utility functions for MARL framework.
-"""
 import time
 import logging
 import numpy as np
@@ -10,7 +7,6 @@ from typing import Tuple
 
 
 class RunningMeanStd:
-    """Track mean and standard deviation of value streams."""
     def __init__(self, epsilon: float = 1e-4, shape: Tuple[int, ...] = (), device="cpu"):
         # Handle CUDA errors gracefully
         try:
@@ -28,7 +24,6 @@ class RunningMeanStd:
         self.count = epsilon
 
     def update(self, arr):
-        """Update running mean/std with new values."""
         arr = arr.reshape(-1, arr.size(-1))
         batch_mean = th.mean(arr, dim=0)
         batch_var = th.var(arr, dim=0)
@@ -36,7 +31,6 @@ class RunningMeanStd:
         self.update_from_moments(batch_mean, batch_var, batch_count)
 
     def update_from_moments(self, batch_mean, batch_var, batch_count: int):
-        """Update running mean/std from batch statistics."""
         delta = batch_mean - self.mean
         tot_count = self.count + batch_count
 
@@ -55,14 +49,12 @@ class RunningMeanStd:
 
 
 class Logger:
-    """Simplified logger that handles console and tensorboard logging"""
     def __init__(self, console_logger):
         self.console_logger = console_logger
         self.stats = defaultdict(lambda: [])
         self.use_tb = False
 
     def setup_tb(self, directory_name):
-        """Setup TensorBoard logging"""
         try:
             from tensorboard_logger import configure, log_value
             configure(directory_name)
@@ -77,7 +69,6 @@ class Logger:
             self.console_logger.warning("Tensorboard logger not installed - won't log to tensorboard")
 
     def log_stat(self, key, value, t):
-        """Log a stat to enabled logging destinations"""
         self.stats[key].append((t, value))
 
         # Log to tensorboard if enabled
@@ -85,7 +76,6 @@ class Logger:
             self.tb_logger(key, value, t)
 
     def print_recent_stats(self):
-        """Print recent stats to console"""
         log_str = "Recent Stats | t_env: {:>10} | Episode: {:>8}\n".format(
             *self.stats["episode"][-1]
         )
@@ -106,12 +96,10 @@ class Logger:
         self.console_logger.info(log_str)
     
     def finish(self):
-        """Clean up any resources"""
         pass
 
 
 def get_logger():
-    """Set up a custom logger"""
     logger = logging.getLogger()
     logger.handlers = []
     ch = logging.StreamHandler()
@@ -149,9 +137,6 @@ def time_left(start_time, t_start, t_current, t_max):
 
 
 def time_str(s):
-    """
-    Convert seconds to a nicer string showing days, hours, minutes and seconds
-    """
     days, remainder = divmod(s, 60 * 60 * 24)
     hours, remainder = divmod(remainder, 60 * 60)
     minutes, seconds = divmod(remainder, 60)
@@ -167,20 +152,6 @@ def time_str(s):
 
 
 def test_alg_config_supports_reward(args):
-    """
-    Check whether algorithm supports specified reward configuration
-    """
     if args.common_reward:
         # all algorithms support common reward
         return True
-    else:
-        if args.learner == "coma_learner" or args.learner == "qtran_learner":
-            # COMA and QTRAN only support common reward
-            return False
-        elif args.learner == "q_learner" and (
-            args.mixer == "vdn" or args.mixer == "qmix"
-        ):
-            # VDN and QMIX only support common reward
-            return False
-        else:
-            return True

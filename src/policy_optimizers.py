@@ -17,13 +17,6 @@ from torch.distributions import Categorical
 class ActorCriticLearner:
     """Actor-critic learner for MARL with centralized value function."""
     def __init__(self, mac, scheme, args):
-        """Initialize the learner with MAC and critics.
-        
-        Args:
-            mac: Multi-Agent Controller that contains agent networks
-            scheme: Data scheme from buffer
-            args: Training arguments
-        """
         self.args = args
         self.mac = mac
         self.n_agents = args.n_agents
@@ -60,21 +53,12 @@ class ActorCriticLearner:
             self.rew_ms = RunningMeanStd(shape=(1,), device=self.device)
 
     def train(self, batch: EpisodeBatch, t_env: int, episode_num: int):
-        """Main A2C/A3C training method.
-        
-        Args:
-            batch: Batch of episodes to train on
-            t_env: Current environment timestep
-            episode_num: Current episode number
-        """
-        # Get relevant quantities from batch
         rewards = batch["reward"][:, :-1]
         actions = batch["actions"][:, :-1]
         terminated = batch["terminated"][:, :-1].float()
         mask = batch["filled"][:, :-1].float()
         mask[:, 1:] = mask[:, 1:] * (1 - terminated[:, :-1])
         
-        # Calculate estimated Q-values
         mac_out = []
         self.mac.init_hidden(batch.batch_size)
         for t in range(batch.max_seq_length):
@@ -184,13 +168,6 @@ class ActorCriticLearner:
 class PPOLearner:
     """PPO learner implementation for MARL with MAC structure."""
     def __init__(self, mac, scheme, args):
-        """Initialize PPO learner with Multi-Agent Controller.
-        
-        Args:
-            mac: Multi-Agent Controller that contains agent networks
-            scheme: Data scheme from buffer
-            args: Training arguments
-        """
         self.args = args
         self.mac = mac
         # Remove logger reference
@@ -233,13 +210,6 @@ class PPOLearner:
             self.rew_ms = RunningMeanStd(shape=(1,), device=self.device)
 
     def train(self, batch: EpisodeBatch, t_env: int, episode_num: int):
-        """Main PPO training method.
-        
-        Args:
-            batch: Batch of episodes to train on
-            t_env: Current environment timestep
-            episode_num: Current episode number
-        """
         # Get relevant quantities from batch
         rewards = batch["reward"][:, :-1]
         actions = batch["actions"][:, :-1]
@@ -264,25 +234,20 @@ class PPOLearner:
         with th.no_grad():
             target_q_vals = self.target_critic(critic_inputs)
             
-            # Expand rewards to match target_q_vals dimensions if needed
             if rewards.dim() != target_q_vals.dim() or rewards.shape[-1] != target_q_vals.shape[-1]:
                 # Check if rewards need to be expanded for per-agent values
                 if target_q_vals.dim() == 4 and rewards.dim() == 3:
-                    # Expand rewards to be per-agent if the critic returns per-agent values
-                    # Shape from [bs, t, 1] to [bs, t, n_agents, 1]
                     rewards = rewards.unsqueeze(2).expand(-1, -1, self.args.n_agents, -1)
                     # Also expand terminated tensor
                     terminated = terminated.unsqueeze(2).expand(-1, -1, self.args.n_agents, -1)
             
             # Now calculate targets with properly shaped tensors
             targets = rewards + self.args.gamma * (1 - terminated) * target_q_vals[:, 1:]
-            
-        # Normalize returns if needed
+
         if getattr(self.args, "standardise_returns", False):
             with th.no_grad():
                 targets = (targets - self.ret_ms.mean) / th.sqrt(self.ret_ms.var)
 
-        # Calculate advantages - ensure they're detached to avoid double backward
         with th.no_grad():
             advantages = (targets - q_vals[:, :-1]).detach()
         
@@ -294,7 +259,6 @@ class PPOLearner:
         else:
             advantages_for_pg = advantages
         
-        # Get old action probabilities
         with th.no_grad():
             actions_onehot = batch["actions_onehot"][:, :-1]
             old_log_probs = ((mac_out[:, :-1].detach() + 1e-10).log() * actions_onehot).sum(dim=-1)
@@ -315,21 +279,15 @@ class PPOLearner:
             # Calculate ratios and PPO loss
             ratios = th.exp(new_log_probs - old_log_probs)
             
-            # Make sure ratios and advantages have compatible shapes for element-wise multiply
             if ratios.shape != advantages_for_pg.shape:
                 if ratios.dim() == advantages_for_pg.dim() - 1 and advantages_for_pg.shape[-1] == 1:
-                    # Squeeze the last dimension from advantages
                     advantages_for_pg = advantages_for_pg.squeeze(-1)
                 elif ratios.dim() == advantages_for_pg.dim():
-                    # They have same number of dimensions but different shapes
-                    # Try to broadcast - this will raise an error if not possible
                     pass
                 else:
-                    # Try a direct reshape if possible
                     try:
                         advantages_for_pg = advantages_for_pg.reshape(ratios.shape)
                     except:
-                        # Last resort - take the mean across agents if that's the issue
                         if advantages_for_pg.shape[2] != ratios.shape[2]:
                             advantages_for_pg = advantages_for_pg.mean(dim=2, keepdim=True)
                             if advantages_for_pg.shape[-1] == 1 and advantages_for_pg.dim() > ratios.dim():
@@ -338,23 +296,19 @@ class PPOLearner:
             surr1 = ratios * advantages_for_pg
             surr2 = th.clamp(ratios, 1.0 - self.clip_param, 1.0 + self.clip_param) * advantages_for_pg
             actor_loss = -th.min(surr1, surr2).mean()
-
-            # Calculate critic loss
-            # Create a fresh forward pass for q_vals in each epoch to avoid double backward
-            if epoch > 0:  # Only recompute after the first iteration
+            if epoch > 0:  
                 q_vals = self.critic(critic_inputs)
-            
-            # Reshape for critic loss calculation if needed
+
             critic_mask = mask
             if q_vals.dim() > mask.dim():
-                # Add necessary dimensions to mask to match q_vals
+
                 for _ in range(q_vals.dim() - mask.dim()):
                     critic_mask = critic_mask.unsqueeze(-1)
-                # Expand mask across agents if needed
+
                 if q_vals.shape[2] > 1 and critic_mask.shape[2] == 1:
                     critic_mask = critic_mask.expand(-1, -1, q_vals.shape[2], -1)
             
-            # Calculate critic loss with appropriate masking
+
             critic_loss = ((q_vals[:, :-1] - targets.detach()) * critic_mask).pow(2).sum() / (critic_mask.sum() + 1e-8)
             
             # Combined loss
@@ -363,14 +317,12 @@ class PPOLearner:
             # Update parameters
             self.optimizer.zero_grad()
             try:
-                # Try with retain_graph=True for all but the last epoch
                 if epoch < self.ppo_epochs - 1:
                     loss.backward(retain_graph=True)
                 else:
                     loss.backward()
             except RuntimeError as e:
                 print(f"Backward error in epoch {epoch}: {e}")
-                # If there's still an error, try without retaining graph
                 loss.backward()
                 
             # Clip gradients if needed
@@ -404,9 +356,6 @@ class PPOLearner:
         if critic_type := getattr(self.args, "critic_type", "central_v"):
             if critic_type in ["central_v", "cv_critic"]:
                 return states
-            
-        # For individual critics with agent IDs, expand state dimensions
-        # Add agent IDs if needed
         if self.args.obs_agent_id:
             agent_ids = th.eye(self.args.n_agents, device=batch.device).unsqueeze(0).unsqueeze(0).expand(bs, max_t, -1, -1)
             # Expand state to include the agent dimension

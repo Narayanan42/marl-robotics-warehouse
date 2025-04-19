@@ -1,33 +1,25 @@
-# --- MAPPO (Multi-Agent PPO) configuration ---
-# Uses a centralized critic (cv_critic) with PPO policy updates
+name: "mappo"
+learner: "ppo_learner"
+critic_type: "cv_critic"
 
-name: "mappo"  # Algorithm name
-learner: "ppo_learner"  # Use PPO learner implementation
-critic_type: "cv_critic"  # Centralized critic that sees global state
+agent_output_type: "pi_logits"
+action_selector: "soft_policies"
+mask_before_softmax: True
 
-# Policy settings
-agent_output_type: "pi_logits"  # Output logits that are converted to probabilities
-action_selector: "soft_policies"  # Sample from policy distribution
-mask_before_softmax: True  # Mask unavailable actions before softmax
+entropy_coef: 0.001
+eps_clip: 0.2
+epochs: 4
 
-# PPO-specific parameters
-entropy_coef: 0.001  # Entropy bonus coefficient for exploration
-eps_clip: 0.2  # PPO clipping parameter
-epochs: 4  # Number of policy update epochs per batch
-
-# Training parameters
 buffer_size: 10
 batch_size_run: 10
 batch_size: 10
 lr: 0.0003
 hidden_dim: 128
-target_update_interval_or_tau: 0.01  # Soft update parameter
-q_nstep: 5  # N-step returns
+target_update_interval_or_tau: 0.01
+q_nstep: 5
 
-# Observation settings
-obs_agent_id: True  # Include agent ID in observations
+obs_agent_id: True
 obs_last_action: False
-obs_individual_obs: False  # Don't include other agents' observations in critic
+obs_individual_obs: False
 
-# Training length
 t_max: 20050000
